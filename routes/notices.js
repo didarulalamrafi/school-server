@@ -1,6 +1,6 @@
 import express from "express";
 import * as noticeController from "../controllers/noticeController.js";
-import { requireStaff } from "../middleware/requireStaff.js";
+import { requireAuth, requireStaff } from "../middleware/requireAuth.js";
 
 const router = express.Router();
 

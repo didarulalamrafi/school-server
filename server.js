@@ -4,48 +4,21 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import { MongoClient, ServerApiVersion } from "mongodb";
 import { toNodeHandler } from "better-auth/node";
 
 import { auth } from "./lib/auth.js";
+import { connectDB } from "./lib/db.js";
 import noticeRoutes from "./routes/notices.js";
-
-// ...বাকি কোড অপরিবর্তিত
+import studentRoutes from "./routes/students.js";
 
 const app = express();
-
-const uri = process.env.MONGODB_URI;
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  },
-});
-
-let dbPromise;
-function connectDB() {
-  if (!dbPromise) {
-    dbPromise = client.connect().then(() => {
-      console.log("Connected to MongoDB!");
-      return client.db("SchoolWebsite"); // ⚠️ lib/auth.js এর db নামের সাথে মিলিয়ে রেখো
-    });
-  }
-  return dbPromise;
-}
-
-// ✅ প্রতিটা রিকোয়েস্টে req.db বসিয়ে দেওয়া, যাতে কন্ট্রোলারে বারবার connectDB() কল করা না লাগে
-app.use(async (req, res, next) => {
-  req.db = await connectDB();
-  next();
-});
 
 app.use(helmet());
 app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"], // 👈 PATCH যোগ করলাম, নাহলে profile update ব্লক হতো
   }),
 );
 
@@ -59,6 +32,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/notices", noticeRoutes);
+app.use("/api/students", studentRoutes);
 
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
@@ -66,8 +40,15 @@ app.use((err, req, res, next) => {
 });
 
 const port = process.env.PORT || 5000;
-app.listen(port, () => {
-  console.log(`School backend listening on port ${port}`);
-});
 
-export default app;
+// আগে DB connect করে নিয়ে তারপর server চালু — Better Auth ও controller দুটোই একই db ব্যবহার করবে
+connectDB()
+  .then(() => {
+    app.listen(port, () => {
+      console.log(`School backend listening on port ${port}`);
+    });
+  })
+  .catch((err) => {
+    console.error("MongoDB কানেক্ট করতে ব্যর্থ:", err);
+    process.exit(1);
+  });
