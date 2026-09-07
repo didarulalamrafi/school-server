@@ -12,7 +12,7 @@ import noticeRoutes from "./routes/notices.js";
 import studentRoutes from "./routes/students.js";
 
 const app = express();
-const cors = require("cors");
+
 app.use(helmet());
 app.use(
   cors({
