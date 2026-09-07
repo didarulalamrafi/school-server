@@ -12,11 +12,11 @@ import noticeRoutes from "./routes/notices.js";
 import studentRoutes from "./routes/students.js";
 
 const app = express();
-
+const cors = require("cors");
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: process.env.FRONTEND_URL || "https://scmschool.vercel.app",
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"], // 👈 PATCH যোগ করলাম, নাহলে profile update ব্লক হতো
   }),
