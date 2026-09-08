@@ -1,4 +1,5 @@
 import { ObjectId } from "mongodb";
+import cloudinary from "../lib/cloudinary.js";
 
 // GET /api/notices — সবাই দেখতে পাবে, নতুন আগে
 export async function list(req, res) {
@@ -40,6 +41,7 @@ export async function getOne(req, res) {
 }
 
 // POST /api/notices — শুধু teacher/admin (requireStaff middleware দিয়ে সুরক্ষিত)
+// PDF অপশনাল — router-এ upload.single("pdf") মিডলওয়্যার দিয়ে req.file আসে
 export async function create(req, res) {
   const { title, content, important } = req.body;
 
@@ -54,6 +56,25 @@ export async function create(req, res) {
     postedBy: { id: req.user.id, name: req.user.name },
     createdAt: new Date(),
   };
+
+  // PDF আপলোড করা থাকলে Cloudinary-তে পাঠানো হচ্ছে
+  if (req.file) {
+    try {
+      const uploadResult = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { resource_type: "raw", folder: "school-notices" },
+          (error, result) => (error ? reject(error) : resolve(result)),
+        );
+        stream.end(req.file.buffer);
+      });
+
+      notice.pdfUrl = uploadResult.secure_url;
+      notice.fileName = req.file.originalname;
+    } catch (err) {
+      console.error("Cloudinary upload failed:", err);
+      return res.status(500).json({ error: "PDF আপলোড করা যায়নি" });
+    }
+  }
 
   const result = await req.db.collection("notices").insertOne(notice);
   res.status(201).json({ _id: result.insertedId, ...notice });
